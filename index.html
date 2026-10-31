@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Froggy Math Jump - Perkalian & Pembagian Kelas 2 SD</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts: Fredoka & Quicksand for playful kids vibe -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Hujan Effect Canvas Overlay */
+        .rain-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Water Ripple Effect */
+        @keyframes rippleEffect {
+            0% {
+                transform: scale(0.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(3.5);
+                opacity: 0;
+            }
+        }
+        .ripple {
+            position: absolute;
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: rippleEffect 0.8s ease-out forwards;
+            pointer-events: none;
+        }
+
+        /* Frog Sink & Jump Animations */
+        @keyframes frogSink {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(40px) scale(0.8) rotate(15deg); opacity: 0.8; }
+            100% { transform: translateY(100px) scale(0.2) rotate(45deg); opacity: 0; }
+        }
+        .animate-sink {
+            animation: frogSink 0.9s ease-in forwards;
+        }
+
+        @keyframes frogJump {
+            0% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-40px) scale(1.15) rotate(-5deg); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .animate-jump {
+            animation: frogJump 0.45s ease-out;
+        }
+
+        /* Leaf Platform Animations */
+        .leaf-descend {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Screen Shake for Incorrect Answer */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Custom Scrollbars hidden */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Custom Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 overflow-hidden h-screen w-screen select-none">
+
+    <!-- Top Utility Controls (Global) -->
+    <div class="fixed top-3 right-3 z-50 flex items-center gap-2">
+        <!-- BGM Toggle Button -->
+        <button id="bgmToggleBtn" onclick="toggleBGM()" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white p-2.5 md:p-3 rounded-full shadow-lg border-2 border-white/80 transition flex items-center justify-center">
+            <i id="bgmIcon" class="ph-bold ph-speaker-high text-xl md:text-2xl"></i>
+        </button>
+        <!-- Full Screen Button -->
+        <button id="fullscreenBtn" onclick="toggleFullScreen()" class="bg-blue-500 hover:bg-blue-600 active:scale-95 text-white p-2.5 md:p-3 rounded-full shadow-lg border-2 border-white/80 transition flex items-center justify-center">
+            <i id="fullscreenIcon" class="ph-bold ph-arrows-out text-xl md:text-2xl"></i>
+        </button>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="w-full h-full relative flex flex-col bg-gradient-to-b from-sky-400 via-teal-500 to-emerald-700 overflow-hidden">
+        
+        <!-- Rain Effect Overlay Canvas -->
+        <canvas id="rainCanvas" class="rain-canvas"></canvas>
+
+        <!-- ================= MODE SELECTION MENU ================= -->
+        <div id="menuScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-cyan-600/90 via-teal-700/95 to-emerald-900/95 backdrop-blur-md transition-all duration-500">
+            <!-- Game Title Banner -->
+            <div class="text-center mb-6 md:mb-10 transform hover:scale-105 transition duration-300">
+                <div class="inline-flex items-center gap-3 bg-amber-400 px-6 py-2 rounded-full border-4 border-amber-200 shadow-xl mb-3 animate-bounce">
+                    <span class="text-2xl md:text-3xl">🐸</span>
+                    <span class="text-amber-950 font-black text-sm md:text-base tracking-wider uppercase">Matematika SD Kelas 2</span>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-extrabold text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)] tracking-wide">
+                    FROGGY JUMP
+                </h1>
+                <p class="text-cyan-100 text-sm md:text-lg font-medium mt-1">Perkalian & Pembagian Seru di Danau</p>
+            </div>
+
+            <!-- Mode Selection Cards Grid -->
+            <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 px-4">
+                <!-- Solo Mode Card -->
+                <button onclick="startGameMode('solo')" class="group relative bg-gradient-to-b from-emerald-400 to-green-600 hover:from-emerald-300 hover:to-green-500 rounded-3xl p-6 border-4 border-emerald-200 shadow-2xl flex flex-col items-center text-center transform hover:-translate-y-2 active:translate-y-0 transition duration-300">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i class="ph-fill ph-user text-5xl text-white"></i>
+                    </div>
+                    <span class="text-2xl font-black text-white drop-shadow">SOLO</span>
+                    <span class="text-xs md:text-sm text-emerald-100 font-semibold mt-1">1 Pemain</span>
+                    <div class="mt-4 px-4 py-1.5 bg-emerald-800/40 rounded-full text-xs text-white font-bold border border-white/20">Layar Penuh</div>
+                </button>
+
+                <!-- Duel Mode Card -->
+                <button onclick="startGameMode('duel')" class="group relative bg-gradient-to-b from-amber-400 to-orange-600 hover:from-amber-300 hover:to-orange-500 rounded-3xl p-6 border-4 border-amber-200 shadow-2xl flex flex-col items-center text-center transform hover:-translate-y-2 active:translate-y-0 transition duration-300">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i class="ph-fill ph-users-three text-5xl text-white"></i>
+                    </div>
+                    <span class="text-2xl font-black text-white drop-shadow">DUEL</span>
+                    <span class="text-xs md:text-sm text-amber-100 font-semibold mt-1">2 Pemain</span>
+                    <div class="mt-4 px-4 py-1.5 bg-amber-800/40 rounded-full text-xs text-white font-bold border border-white/20">Split Screen (2)</div>
+                </button>
+
+                <!-- Squad Mode Card -->
+                <button onclick="startGameMode('squad')" class="group relative bg-gradient-to-b from-indigo-400 to-purple-600 hover:from-indigo-300 hover:to-purple-500 rounded-3xl p-6 border-4 border-indigo-200 shadow-2xl flex flex-col items-center text-center transform hover:-translate-y-2 active:translate-y-0 transition duration-300">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i class="ph-fill ph-users-four text-5xl text-white"></i>
+                    </div>
+                    <span class="text-2xl font-black text-white drop-shadow">SQUAD</span>
+                    <span class="text-xs md:text-sm text-indigo-100 font-semibold mt-1">4 Pemain</span>
+                    <div class="mt-4 px-4 py-1.5 bg-indigo-800/40 rounded-full text-xs text-white font-bold border border-white/20">Split Screen (4)</div>
+                </button>
+            </div>
+
+            <!-- Footer Info -->
+            <div class="mt-8 text-center text-cyan-200 text-xs md:text-sm">
+                <p class="flex items-center gap-1 justify-center"><i class="ph-bold ph-lightbulb"></i> Pilih mode bermain untuk mulai berlari & melompat!</p>
+            </div>
+        </div>
+
+        <!-- ================= GAMEPLAY CONTAINER ================= -->
+        <div id="gameplayContainer" class="hidden w-full h-full flex flex-col md:flex-row relative">
+            <!-- Home / Back Button -->
+            <button onclick="returnToMenu()" class="absolute top-3 left-3 z-50 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white p-2.5 md:p-3 rounded-full shadow-lg border-2 border-white/80 transition flex items-center justify-center">
+                <i class="ph-bold ph-house text-xl md:text-2xl"></i>
+            </button>
+
+            <!-- Dynamic Split View Grid Container -->
+            <div id="splitGrid" class="w-full h-full grid divide-y md:divide-y-0 md:divide-x divide-teal-900/40">
+                <!-- Player Lanes dynamically injected here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO SYNTH & SOUND EFFECTS SYSTEM -->
+    <script>
+        // Web Audio API Synthesizer for SFX & Music
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.bgmInterval = null;
+                this.bgmPlaying = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playSplash() {
+                this.init();
+                // Noise buffer for water splash
+                const bufferSize = this.ctx.sampleRate * 0.4;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.4);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                whiteNoise.start();
+                whiteNoise.stop(this.ctx.currentTime + 0.4);
+            }
+
+            playSuccess() {
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.08);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + index * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.08);
+                    osc.stop(this.ctx.currentTime + index * 0.08 + 0.2);
+                });
+            }
+
+            toggleBgm(enable) {
+                this.init();
+                if (enable && !this.bgmPlaying) {
+                    this.bgmPlaying = true;
+                    let step = 0;
+                    const melody = [261.63, 329.63, 392.00, 329.63, 349.23, 440.00, 392.00, 329.63];
+                    this.bgmInterval = setInterval(() => {
+                        if (!this.bgmPlaying) return;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(melody[step % melody.length], this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.35);
+                        step++;
+                    }, 400);
+                } else if (!enable && this.bgmPlaying) {
+                    this.bgmPlaying = false;
+                    clearInterval(this.bgmInterval);
+                }
+            }
+        }
+
+        const soundFX = new SoundSystem();
+        let bgmActive = false;
+
+        function toggleBGM() {
+            bgmActive = !bgmActive;
+            const bgmIcon = document.getElementById('bgmIcon');
+            const bgmBtn = document.getElementById('bgmToggleBtn');
+            if (bgmActive) {
+                soundFX.toggleBgm(true);
+                bgmIcon.className = "ph-bold ph-speaker-high text-xl md:text-2xl";
+                bgmBtn.classList.replace('bg-slate-600', 'bg-emerald-500');
+            } else {
+                soundFX.toggleBgm(false);
+                bgmIcon.className = "ph-bold ph-speaker-slash text-xl md:text-2xl";
+                bgmBtn.classList.replace('bg-emerald-500', 'bg-slate-600');
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+                document.getElementById('fullscreenIcon').className = "ph-bold ph-arrows-in text-xl md:text-2xl";
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    document.getElementById('fullscreenIcon').className = "ph-bold ph-arrows-out text-xl md:text-2xl";
+                }
+            }
+        }
+    </script>
+
+    <!-- RAIN ENGINE CANVAS -->
+    <script>
+        const canvas = document.getElementById('rainCanvas');
+        const ctx = canvas.getContext('2d');
+        let drops = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initDrops();
+        }
+
+        function initDrops() {
+            drops = [];
+            const count = Math.floor(window.innerWidth / 15);
+            for (let i = 0; i < count; i++) {
+                drops.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    length: Math.random() * 15 + 10,
+                    speed: Math.random() * 8 + 6,
+                    opacity: Math.random() * 0.3 + 0.1
+                });
+            }
+        }
+
+        function drawRain() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+
+            for (let i = 0; i < drops.length; i++) {
+                const d = drops[i];
+                ctx.beginPath();
+                ctx.moveTo(d.x, d.y);
+                ctx.lineTo(d.x - 2, d.y + d.length);
+                ctx.stroke();
+
+                d.y += d.speed;
+                d.x -= 0.5;
+
+                if (d.y > canvas.height) {
+                    d.y = -d.length;
+                    d.x = Math.random() * canvas.width;
+                }
+            }
+            requestAnimationFrame(drawRain);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        drawRain();
+    </script>
+
+    <!-- GAMEPLAY & SYSTEM LOGIC -->
+    <script>
+        // Game State Variables
+        let currentMode = 'solo'; // 'solo', 'duel', 'squad'
+        let playersState = [];
+
+        // Colors per player indicator
+        const PLAYER_CONFIGS = [
+            { id: 1, name: 'P1', label: 'Pemain 1', color: 'emerald', bg: 'bg-emerald-500', border: 'border-emerald-300', text: 'text-emerald-500', frogColor: 'text-emerald-400' },
+            { id: 2, name: 'P2', label: 'Pemain 2', color: 'amber', bg: 'bg-amber-500', border: 'border-amber-300', text: 'text-amber-500', frogColor: 'text-amber-400' },
+            { id: 3, name: 'P3', label: 'Pemain 3', color: 'indigo', bg: 'bg-indigo-500', border: 'border-indigo-300', text: 'text-indigo-500', frogColor: 'text-indigo-400' },
+            { id: 4, name: 'P4', label: 'Pemain 4', color: 'rose', bg: 'bg-rose-500', border: 'border-rose-300', text: 'text-rose-500', frogColor: 'text-rose-400' }
+        ];
+
+        // Generate Math Question tailored for Grade 2 SD (Perkalian 1-5, Pembagian hasil 1-10)
+        function generateMathQuestion() {
+            const isMultiplication = Math.random() > 0.5;
+            let num1, num2, answer, questionText;
+
+            if (isMultiplication) {
+                num1 = Math.floor(Math.random() * 5) + 1; // 1 - 5
+                num2 = Math.floor(Math.random() * 10) + 1; // 1 - 10
+                answer = num1 * num2;
+                questionText = `${num1} × ${num2}`;
+            } else {
+                // Division (Pembagian pas tanpa sisa)
+                num2 = Math.floor(Math.random() * 5) + 1; // Pembagi 1-5
+                answer = Math.floor(Math.random() * 10) + 1; // Hasil 1-10
+                num1 = num2 * answer;
+                questionText = `${num1} ÷ ${num2}`;
+            }
+
+            // Generate 3 wrong options close to answer
+            let options = new Set();
+            options.add(answer);
+            while (options.size < 4) {
+                let delta = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1);
+                let wrongVal = answer + delta;
+                if (wrongVal > 0 && wrongVal !== answer) {
+                    options.add(wrongVal);
+                }
+            }
+
+            // Shuffle options
+            const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
+
+            return {
+                text: questionText,
+                answer: answer,
+                options: shuffledOptions
+            };
+        }
+
+        // Start Selected Game Mode
+        function startGameMode(mode) {
+            soundFX.init();
+            currentMode = mode;
+
+            let count = 1;
+            if (mode === 'duel') count = 2;
+            if (mode === 'squad') count = 4;
+
+            playersState = [];
+            for (let i = 0; i < count; i++) {
+                playersState.push({
+                    id: i + 1,
+                    config: PLAYER_CONFIGS[i],
+                    score: 0,
+                    question: generateMathQuestion(),
+                    isAnimating: false
+                });
+            }
+
+            renderBoard();
+            
+            document.getElementById('menuScreen').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                document.getElementById('menuScreen').classList.add('hidden');
+                document.getElementById('gameplayContainer').classList.remove('hidden');
+            }, 300);
+        }
+
+        function returnToMenu() {
+            document.getElementById('menuScreen').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            document.getElementById('gameplayContainer').classList.add('hidden');
+        }
+
+        // Render Split Screen Layout based on mode
+        function renderBoard() {
+            const splitGrid = document.getElementById('splitGrid');
+            splitGrid.innerHTML = '';
+
+            // Grid column classes depending on mode & screen size
+            if (currentMode === 'solo') {
+                splitGrid.className = "w-full h-full grid grid-cols-1";
+            } else if (currentMode === 'duel') {
+                splitGrid.className = "w-full h-full grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-teal-800/40";
+            } else if (currentMode === 'squad') {
+                splitGrid.className = "w-full h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-teal-800/40";
+            }
+
+            playersState.forEach((player) => {
+                const laneEl = document.createElement('div');
+                laneEl.id = `player-lane-${player.id}`;
+                laneEl.className = "relative h-full flex flex-col justify-between p-3 md:p-5 overflow-hidden bg-gradient-to-b from-sky-500/20 via-teal-700/30 to-teal-900/50";
+                
+                laneEl.innerHTML = `
+                    <!-- Player Header / Score Info -->
+                    <div class="z-20 flex items-center justify-between bg-slate-900/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 shadow-md">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-full ${player.config.bg} text-white font-black flex items-center justify-center text-xs shadow-md">
+                                ${player.config.name}
+                            </span>
+                            <span class="text-white font-bold text-sm md:text-base tracking-wide">${player.config.label}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-amber-400/90 text-amber-950 px-3 py-1 rounded-xl font-black text-sm md:text-base border border-amber-200">
+                            <i class="ph-fill ph-star text-amber-900"></i>
+                            <span id="score-${player.id}">${player.score}</span>
+                        </div>
+                    </div>
+
+                    <!-- POND AREA (Frog + Lily Pads) -->
+                    <div id="pond-${player.id}" class="relative flex-1 my-2 flex flex-col items-center justify-center overflow-hidden">
+                        
+                        <!-- Water Ripple Layer -->
+                        <div id="ripple-container-${player.id}" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10"></div>
+
+                        <!-- TOP / NEXT LILY PAD (Destination) -->
+                        <div id="top-pad-${player.id}" class="leaf-descend relative flex flex-col items-center justify-center mb-6 md:mb-10 transition-all duration-500">
+                            <!-- Floating Leaf SVG -->
+                            <div class="relative w-36 h-20 md:w-48 md:h-24 flex items-center justify-center">
+                                <svg class="w-full h-full drop-shadow-xl" viewBox="0 0 100 60" fill="none">
+                                    <path d="M50 5C25 5 5 20 5 35C5 50 25 55 50 55C75 55 95 50 95 35C95 20 75 5 50 5Z" fill="#10B981"/>
+                                    <path d="M50 8C28 8 10 22 10 35C10 46 28 51 50 51C72 51 90 46 90 35C90 22 72 8 50 8Z" fill="#34D399"/>
+                                    <path d="M50 35 L50 5 M50 35 L15 25 M50 35 L85 25 M50 35 L25 48 M50 35 L75 48" stroke="#059669" stroke-width="2"/>
+                                </svg>
+                                <!-- Target Pad Badge -->
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span class="text-xs md:text-sm bg-emerald-950/70 text-emerald-200 font-bold px-3 py-0.5 rounded-full border border-emerald-400/50">Target Loncat</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BOTTOM LILY PAD WITH FROG (Current Position) -->
+                        <div id="bottom-pad-${player.id}" class="relative flex flex-col items-center justify-center transition-all duration-500">
+                            <!-- Frog Element -->
+                            <div id="frog-${player.id}" class="z-20 transform -mb-4 md:-mb-6 transition-transform">
+                                <div class="relative flex flex-col items-center">
+                                    <!-- Frog Custom Image Render -->
+                                    <img src="https://imgur.com/syl8XLy.png" 
+                                         alt="Froggy" 
+                                         class="w-16 h-16 md:w-24 md:h-24 object-contain filter drop-shadow-[0_8px_8px_rgba(0,0,0,0.4)]"
+                                         onerror="this.onerror=null; this.src='https://placehold.co/100x100/10b981/ffffff?text=🐸';" />
+                                </div>
+                            </div>
+
+                            <!-- Current Lily Pad Leaf -->
+                            <div class="relative w-40 h-24 md:w-56 md:h-28 flex items-center justify-center">
+                                <svg class="w-full h-full drop-shadow-2xl" viewBox="0 0 100 60" fill="none">
+                                    <path d="M50 5C25 5 5 20 5 35C5 50 25 55 50 55C75 55 95 50 95 35C95 20 75 5 50 5Z" fill="#059669"/>
+                                    <path d="M50 8C28 8 10 22 10 35C10 46 28 51 50 51C72 51 90 46 90 35C90 22 72 8 50 8Z" fill="#10B981"/>
+                                    <path d="M50 35 L50 5 M50 35 L15 25 M50 35 L85 25 M50 35 L25 48 M50 35 L75 48" stroke="#047857" stroke-width="2"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- QUESTION & CONTROLS SECTION -->
+                    <div class="z-20 flex flex-col gap-3">
+                        <!-- Question Display Box -->
+                        <div id="q-box-${player.id}" class="bg-slate-900/80 border-2 border-amber-400/80 rounded-2xl p-3 md:p-4 text-center shadow-lg backdrop-blur-md">
+                            <span class="text-xs text-amber-300 uppercase tracking-widest font-extrabold block mb-1">Berapa Hasil Dari:</span>
+                            <div class="text-3xl md:text-4xl font-black text-white tracking-wider" id="q-text-${player.id}">
+                                ${player.question.text}
+                            </div>
+                        </div>
+
+                        <!-- 4 Answer Option Buttons Grid -->
+                        <div id="options-grid-${player.id}" class="grid grid-cols-2 gap-2 md:gap-3">
+                            ${player.question.options.map(opt => `
+                                <button onclick="submitAnswer(${player.id}, ${opt}, this)" class="h-12 md:h-14 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 active:scale-95 text-white text-xl md:text-2xl font-black rounded-xl border-b-4 border-emerald-700 shadow-lg transition duration-150 flex items-center justify-center">
+                                    ${opt}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                splitGrid.appendChild(laneEl);
+            });
+        }
+
+        // Handle Player Answer Selection
+        function submitAnswer(playerId, selectedOption, btnElement) {
+            const player = playersState.find(p => p.id === playerId);
+            if (!player || player.isAnimating) return;
+
+            player.isAnimating = true;
+
+            const frog = document.getElementById(`frog-${playerId}`);
+            const lane = document.getElementById(`player-lane-${playerId}`);
+            const rippleContainer = document.getElementById(`ripple-container-${playerId}`);
+
+            if (selectedOption === player.question.answer) {
+                // RIGHT ANSWER: JUMP ANIMATION
+                soundFX.playJump();
+                frog.classList.add('animate-jump');
+
+                // Button highlight success
+                btnElement.classList.replace('bg-emerald-500', 'bg-amber-400');
+                btnElement.classList.replace('border-emerald-700', 'border-amber-600');
+
+                setTimeout(() => {
+                    soundFX.playSuccess();
+                    player.score += 10;
+                    document.getElementById(`score-${playerId}`).innerText = player.score;
+
+                    // Generate new question & Refresh UI
+                    player.question = generateMathQuestion();
+                    updatePlayerLaneQuestion(player);
+
+                    frog.classList.remove('animate-jump');
+                    player.isAnimating = false;
+                }, 450);
+
+            } else {
+                // WRONG ANSWER: WATER SPLASH & SINK ANIMATION
+                soundFX.playSplash();
+
+                // Button highlight error
+                btnElement.classList.replace('bg-emerald-500', 'bg-rose-600');
+                btnElement.classList.replace('border-emerald-700', 'border-rose-800');
+                lane.classList.add('animate-shake');
+
+                // Create Ripple effect in water
+                const ripple = document.createElement('div');
+                ripple.className = 'ripple w-20 h-20';
+                rippleContainer.appendChild(ripple);
+
+                // Sink Frog
+                frog.classList.add('animate-sink');
+
+                setTimeout(() => {
+                    // Reset Frog Position & Ripple
+                    ripple.remove();
+                    frog.classList.remove('animate-sink');
+                    lane.classList.remove('animate-shake');
+
+                    // Small Penalty or Refresh Question
+                    player.question = generateMathQuestion();
+                    updatePlayerLaneQuestion(player);
+
+                    player.isAnimating = false;
+                }, 900);
+            }
+        }
+
+        // Update Question & Buttons for specific lane
+        function updatePlayerLaneQuestion(player) {
+            const qText = document.getElementById(`q-text-${player.id}`);
+            const grid = document.getElementById(`options-grid-${player.id}`);
+
+            if (qText && grid) {
+                qText.innerText = player.question.text;
+                grid.innerHTML = player.question.options.map(opt => `
+                    <button onclick="submitAnswer(${player.id}, ${opt}, this)" class="h-12 md:h-14 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 active:scale-95 text-white text-xl md:text-2xl font-black rounded-xl border-b-4 border-emerald-700 shadow-lg transition duration-150 flex items-center justify-center">
+                        ${opt}
+                    </button>
+                `).join('');
+            }
+        }
+    </script>
+</body>
+</html>
